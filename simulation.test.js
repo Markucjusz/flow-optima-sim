@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { calculateMetrics, validateConfig } = require("./simulation.js");
+const scenarios = require("./scenarios.js");
 
 const sample = {
     batchSize: 20,
@@ -47,10 +48,26 @@ test("waliduje zakresy, wymagane pola i co najmniej jedno stanowisko", () => {
     assert.equal(validateConfig({ ...sample, stations: [{ name: "", cycleTimeSec: -1, setupTimeMin: 0 }] }).valid, false);
 });
 
-test("nie mutuje konfiguracji wejściowej i odrzuca złośliwe/niepoprawne nazwy jako nieprawidłowe", () => {
+test("nie mutuje konfiguracji wejściowej", () => {
     const original = JSON.parse(JSON.stringify(sample));
-    const validated = validateConfig(sample);
+    assert.deepEqual(validateConfig(sample).config, original);
     assert.deepEqual(sample, original);
-    assert.equal(validated.valid, true);
     assert.throws(() => calculateMetrics({ ...sample, stations: [{ name: " ", cycleTimeSec: 10, setupTimeMin: 0 }] }), TypeError);
+});
+
+test("zawiera standardowy profil domyślny i edytowalne profile branżowe", () => {
+    assert.deepEqual(Object.keys(scenarios.profiles), ["standard", "machining", "assembly", "packaging"]);
+    for (const key of Object.keys(scenarios.profiles)) {
+        const profile = scenarios.getProfile(key);
+        assert.equal(validateConfig(profile.config).valid, true);
+        assert.ok(profile.config.stations.length >= 4);
+        assert.ok(profile.name.length > 0);
+    }
+});
+
+test("zwraca kopię profilu, aby edycja nie zmieniała katalogu wbudowanego", () => {
+    const profile = scenarios.getProfile("standard");
+    profile.config.stations[0].name = "Zmienione stanowisko";
+    assert.equal(scenarios.getProfile("standard").config.stations[0].name, "Przygotowanie materiału");
+    assert.equal(scenarios.getProfile("missing"), null);
 });

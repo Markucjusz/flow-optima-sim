@@ -1,8 +1,9 @@
+/* Repository-local tests only; no runtime dependencies are needed. */
 {
   "name": "flow-optima-sim",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Testy silnika obliczeniowego FlowOptima",
+  "description": "FlowOptima production flow simulator and calculation tests",
   "scripts": {
     "test": "node --test"
   }
