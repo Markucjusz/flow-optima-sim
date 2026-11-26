@@ -3,30 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlowOptima | Symulator Przepływu Produkcji</title>
+    <title>FlowOptima | Symulator przepływu produkcji</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <div class="container header-content">
             <div>
-                <h1>FlowOptima <span class="badge">Symulator produkcji</span></h1>
-                <p class="subtitle">Edytowalne scenariusze przepływu, wąskich gardeł i przezbrojeń</p>
+                <h1>FlowOptima <span class="badge">Digital Twin Lite</span></h1>
+                <p class="subtitle">Standardowe i spersonalizowane procesy produkcyjne</p>
             </div>
             <div class="config-controls">
-                <label class="profile-picker">Scenariusz
-                    <select id="presetSelect" title="Wybierz scenariusz produkcyjny">
-                        <optgroup label="Scenariusze przykładowe">
-                            <option value="standard">Proces produkcyjny — standardowy</option>
-                            <option value="machining">Obróbka — przykład</option>
-                            <option value="assembly">Montaż — przykład</option>
-                            <option value="packaging">Pakowanie — przykład</option>
-                        </optgroup>
-                        <optgroup id="customProfiles" label="Moje profile"></optgroup>
-                    </select>
-                </label>
-                <button id="saveProfileBtn" class="btn btn-secondary" type="button">Zapisz jako własny profil</button>
-                <button id="exportBtn" class="btn btn-secondary" type="button">Eksportuj JSON</button>
+                <select id="presetSelect" title="Wybierz standardowy lub branżowy scenariusz">
+                    <option value="standard">Standardowy proces produkcyjny</option>
+                    <option value="cnc">Obróbka profili CNC</option>
+                    <option value="assembly">Gniazdo montażowe</option>
+                    <option value="" disabled>Własny scenariusz</option>
+                </select>
+                <button id="exportBtn" class="btn btn-secondary">Eksportuj JSON</button>
                 <label class="btn btn-secondary file-label">
                     Importuj JSON
                     <input type="file" id="importInput" accept=".json,application/json" hidden>
@@ -37,14 +31,14 @@
 
     <main class="container">
         <section class="card global-params">
-            <h2>Parametry zlecenia</h2>
+            <h2>Parametry zlecenia produkcyjnego</h2>
             <div class="params-grid">
                 <div class="param-box">
                     <label for="batchSize">Wielkość partii (szt.): <strong id="batchSizeVal">100</strong></label>
                     <input type="range" id="batchSize" min="1" max="10000" step="1" value="100">
                 </div>
                 <div class="param-box">
-                    <label for="shiftHours">Dostępny czas zmiany (min): <strong id="shiftHoursVal">450</strong></label>
+                    <label for="shiftHours">Czas dostępny na zmianie (min): <strong id="shiftHoursVal">450</strong></label>
                     <input type="range" id="shiftHours" min="1" max="1440" step="1" value="450">
                 </div>
                 <div class="param-box">
@@ -61,12 +55,12 @@
                 <span class="kpi-desc" id="kpiBottleneckTime">Obciążenie partią: -</span>
             </div>
             <div class="card kpi-card">
-                <span class="kpi-title">Czas realizacji partii</span>
+                <span class="kpi-title">Czas realizacji partii (Lead Time)</span>
                 <strong class="kpi-value" id="kpiLeadTime">-</strong>
                 <span class="kpi-desc" id="kpiThroughput">Wydajność: - szt./h</span>
             </div>
             <div class="card kpi-card">
-                <span class="kpi-title">Przezbrojenia (SMED)</span>
+                <span class="kpi-title">Udział przezbrojeń (SMED)</span>
                 <strong class="kpi-value warning" id="kpiSetupShare">-</strong>
                 <span class="kpi-desc" id="kpiSetupCost">-</span>
             </div>
@@ -76,30 +70,28 @@
                 <span class="kpi-desc" id="kpiShiftCapacityDesc">-</span>
             </div>
             <div class="card kpi-card">
-                <span class="kpi-title">Zapas w toku (WIP)</span>
+                <span class="kpi-title">Zapas w toku (WIP przed gardłem)</span>
                 <strong class="kpi-value" id="kpiWip">-</strong>
-                <span class="kpi-desc">Uproszczone oszacowanie przed gardłem</span>
+                <span class="kpi-desc">Uproszczone oszacowanie dla poprzedniego stanowiska</span>
             </div>
         </section>
 
         <section class="card">
             <div class="section-header">
-                <h2>Edytuj stanowiska procesu</h2>
-                <button id="addStationBtn" class="btn btn-primary" type="button">+ Dodaj stanowisko</button>
+                <h2>Stanowiska w procesie — edytuj dowolnie</h2>
+                <button id="addStationBtn" class="btn btn-primary">+ Dodaj stanowisko</button>
             </div>
-            <p class="help-text">Zmień nazwę lub czasy cyklu i przezbrojenia, dodaj albo usuń etapy. Zapisz własny profil, aby zachować go w tej przeglądarce.</p>
             <div id="stationsContainer" class="stations-flow"></div>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            <p>Profile są punktami startowymi, a nie normami branżowymi. Wyniki to uproszczone szacunki dla liniowego procesu. Dane profili własnych są przechowywane lokalnie w przeglądarce.</p>
+            <p>Aplikacja działa lokalnie w przeglądarce. Nazwy, czasy cyklu i przezbrojeń można dowolnie zmieniać.</p>
         </div>
     </footer>
 
     <script src="simulation.js"></script>
-    <script src="scenarios.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

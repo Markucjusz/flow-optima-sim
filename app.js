@@ -1,59 +1,52 @@
-const STORAGE_KEY = "flowOptima.customProfiles.v1";
-const PRESETS = FlowOptimaScenarios.profiles;
-let state = FlowOptimaScenarios.getProfile("standard").config;
-let activeProfileId = "standard";
+// Wbudowane, edytowalne scenariusze produkcyjne.
+const PRESETS = {
+    standard: {
+        name: "Standardowy proces produkcyjny",
+        batchSize: 100,
+        shiftMinutes: 450,
+        hourlyCost: 250,
+        stations: [
+            { id: 1, name: "1. Przygotowanie materiału", cycleTimeSec: 40, setupTimeMin: 15 },
+            { id: 2, name: "2. Obróbka / produkcja", cycleTimeSec: 90, setupTimeMin: 25 },
+            { id: 3, name: "3. Montaż", cycleTimeSec: 70, setupTimeMin: 15 },
+            { id: 4, name: "4. Kontrola jakości", cycleTimeSec: 35, setupTimeMin: 5 },
+            { id: 5, name: "5. Pakowanie i wydanie", cycleTimeSec: 30, setupTimeMin: 10 }
+        ]
+    },
+    cnc: {
+        name: "Obróbka profili CNC",
+        batchSize: 60,
+        shiftMinutes: 450,
+        hourlyCost: 300,
+        stations: [
+            { id: 1, name: "1. Cięcie piłą CNC", cycleTimeSec: 45, setupTimeMin: 15 },
+            { id: 2, name: "2. Frezowanie otworów", cycleTimeSec: 110, setupTimeMin: 25 },
+            { id: 3, name: "3. Gięcie profili", cycleTimeSec: 65, setupTimeMin: 20 },
+            { id: 4, name: "4. Kontrola i pakowanie", cycleTimeSec: 50, setupTimeMin: 5 }
+        ]
+    },
+    assembly: {
+        name: "Gniazdo montażowe",
+        batchSize: 120,
+        shiftMinutes: 450,
+        hourlyCost: 220,
+        stations: [
+            { id: 1, name: "1. Kompletacja detali", cycleTimeSec: 30, setupTimeMin: 10 },
+            { id: 2, name: "2. Montaż wstępny", cycleTimeSec: 75, setupTimeMin: 5 },
+            { id: 3, name: "3. Nitowanie i zgrzewanie", cycleTimeSec: 95, setupTimeMin: 15 },
+            { id: 4, name: "4. Test szczelności", cycleTimeSec: 60, setupTimeMin: 10 }
+        ]
+    }
+};
+
+let state = JSON.parse(JSON.stringify(PRESETS.standard));
 
 const batchInput = document.getElementById("batchSize");
 const shiftInput = document.getElementById("shiftHours");
 const costInput = document.getElementById("hourlyCost");
 const stationsContainer = document.getElementById("stationsContainer");
-const presetSelect = document.getElementById("presetSelect");
-
-function readCustomProfiles() {
-    try {
-        const profiles = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        return Array.isArray(profiles) ? profiles.filter((profile) =>
-            profile && typeof profile.id === "string" && typeof profile.name === "string"
-            && FlowOptimaSimulation.validateConfig(profile.config).valid
-        ) : [];
-    } catch (error) {
-        return [];
-    }
-}
-
-function writeCustomProfiles(profiles) {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
-        return true;
-    } catch (error) {
-        alert("Nie można zapisać profilu w tej przeglądarce. Możesz użyć eksportu JSON.");
-        return false;
-    }
-}
-
-function updateProfileOptions() {
-    const customGroup = document.getElementById("customProfiles");
-    customGroup.replaceChildren();
-    readCustomProfiles().forEach((profile) => {
-        const option = document.createElement("option");
-        option.value = profile.id;
-        option.textContent = profile.name;
-        customGroup.appendChild(option);
-    });
-    presetSelect.value = activeProfileId;
-}
-
-function persistActiveCustomProfile() {
-    if (!activeProfileId.startsWith("custom:")) return;
-    const profiles = readCustomProfiles();
-    const profile = profiles.find((item) => item.id === activeProfileId);
-    if (!profile) return;
-    profile.config = JSON.parse(JSON.stringify(state));
-    writeCustomProfiles(profiles);
-}
 
 function init() {
-    updateProfileOptions();
     syncGlobalInputs();
     render();
     attachEvents();
@@ -75,14 +68,14 @@ function createElement(tag, className, text) {
     return element;
 }
 
-function createRange(className, index, min, max, value) {
+function createRange(className, index, min, max, value, step = 1) {
     const input = document.createElement("input");
     input.type = "range";
     input.className = className;
     input.dataset.idx = index;
     input.min = min;
     input.max = max;
-    input.step = 1;
+    input.step = step;
     input.value = value;
     return input;
 }
@@ -90,6 +83,7 @@ function createRange(className, index, min, max, value) {
 function render() {
     const result = FlowOptimaSimulation.calculateMetrics(state);
     const { stations, bottleneckIndex } = result;
+
     document.getElementById("kpiBottleneck").textContent = result.bottleneck.name;
     document.getElementById("kpiBottleneckTime").textContent = `Obciążenie partią: ${Math.round(result.bottleneck.totalMin)} min`;
     document.getElementById("kpiLeadTime").textContent = `${Math.round(result.leadTimeMin)} min (${(result.leadTimeMin / 60).toFixed(1)} h)`;
@@ -98,7 +92,7 @@ function render() {
     document.getElementById("kpiSetupCost").textContent = `${result.totalSetupMin} min łącznie · koszt: ${result.setupCost.toFixed(2)} PLN`;
     document.getElementById("kpiWip").textContent = `${result.wipUnits} szt.`;
     document.getElementById("kpiShiftCapacity").textContent = `${result.unitsPerShift} szt.`;
-    document.getElementById("kpiShiftCapacityDesc").textContent = `Szacunek dla ${state.shiftMinutes} min; odjęto setup wąskiego gardła`;
+    document.getElementById("kpiShiftCapacityDesc").textContent = `Szacunek dla ${state.shiftMinutes} min; odjęto przezbrojenie wąskiego gardła`;
 
     stationsContainer.replaceChildren();
     stations.forEach((station, index) => {
@@ -106,6 +100,7 @@ function render() {
         const utilization = Math.min(100, Math.round((station.totalMin / result.bottleneck.totalMin) * 100));
         const card = createElement("div", `station-card${isBottleneck ? " is-bottleneck" : ""}`);
         const header = createElement("div", "station-header");
+
         const name = document.createElement("input");
         name.type = "text";
         name.className = "station-name-input";
@@ -114,6 +109,7 @@ function render() {
         name.dataset.idx = index;
         name.setAttribute("aria-label", `Nazwa stanowiska ${index + 1}`);
         header.appendChild(name);
+
         if (stations.length > 1) {
             const remove = createElement("button", "remove-btn", "✕");
             remove.type = "button";
@@ -140,142 +136,128 @@ function render() {
         stats.appendChild(createElement("span", "", `Obciążenie: ${utilization}% (${Math.round(station.totalMin)} min)`));
         if (isBottleneck) stats.appendChild(createElement("span", "bottleneck-tag", "WĄSKIE GARDŁO"));
         card.appendChild(stats);
+
         stationsContainer.appendChild(card);
     });
-}
-
-function saveAsCustomProfile() {
-    const name = prompt("Podaj nazwę własnego profilu:", "Mój proces produkcyjny");
-    if (name === null) return;
-    const trimmedName = name.trim();
-    if (!trimmedName || trimmedName.length > 80) {
-        alert("Nazwa profilu musi mieć od 1 do 80 znaków.");
-        return;
-    }
-    const profiles = readCustomProfiles();
-    const id = `custom:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
-    profiles.push({ id, name: trimmedName, config: JSON.parse(JSON.stringify(state)) });
-    if (writeCustomProfiles(profiles)) {
-        activeProfileId = id;
-        updateProfileOptions();
-    }
-}
-
-function exportConfig() {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "konfiguracja_linii.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-}
-
-function importConfig(file, input) {
-    if (!file) return;
-    if (file.size > 1024 * 1024) {
-        alert("Plik konfiguracyjny przekracza limit 1 MB.");
-        input.value = "";
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-        try {
-            const imported = JSON.parse(reader.result);
-            const validation = FlowOptimaSimulation.validateConfig(imported);
-            if (!validation.valid) {
-                alert(`Nieprawidłowa konfiguracja:\n${validation.errors.join("\n")}`);
-                return;
-            }
-            state = validation.config;
-            activeProfileId = "custom:imported";
-            const profiles = readCustomProfiles();
-            const importedProfile = profiles.find((profile) => profile.id === activeProfileId);
-            if (!importedProfile) {
-                const id = `custom:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
-                profiles.push({ id, name: "Zaimportowany profil", config: JSON.parse(JSON.stringify(state)) });
-                activeProfileId = id;
-                writeCustomProfiles(profiles);
-            }
-            updateProfileOptions();
-            syncGlobalInputs();
-            render();
-        } catch (error) {
-            alert("Nie udało się odczytać pliku JSON.");
-        } finally {
-            input.value = "";
-        }
-    };
-    reader.onerror = () => {
-        alert("Błąd odczytu pliku konfiguracyjnego.");
-        input.value = "";
-    };
-    reader.readAsText(file);
 }
 
 function attachEvents() {
     batchInput.addEventListener("input", (event) => {
         state.batchSize = Number(event.target.value);
         document.getElementById("batchSizeVal").textContent = state.batchSize;
-        persistActiveCustomProfile();
         render();
     });
+
     shiftInput.addEventListener("input", (event) => {
         state.shiftMinutes = Number(event.target.value);
         document.getElementById("shiftHoursVal").textContent = state.shiftMinutes;
-        persistActiveCustomProfile();
         render();
     });
+
     costInput.addEventListener("input", (event) => {
         state.hourlyCost = Number(event.target.value);
         document.getElementById("hourlyCostVal").textContent = state.hourlyCost;
-        persistActiveCustomProfile();
         render();
     });
+
     stationsContainer.addEventListener("input", (event) => {
         const index = Number(event.target.dataset.idx);
         if (!Number.isInteger(index) || !state.stations[index]) return;
-        if (event.target.classList.contains("cycle-slider")) state.stations[index].cycleTimeSec = Number(event.target.value);
-        else if (event.target.classList.contains("setup-slider")) state.stations[index].setupTimeMin = Number(event.target.value);
-        else if (event.target.classList.contains("station-name-input")) state.stations[index].name = event.target.value;
-        else return;
-        persistActiveCustomProfile();
-        if (event.target.classList.contains("station-name-input")) {
-            document.getElementById("kpiBottleneck").textContent = state.stations[index].name;
-        } else {
+
+        if (event.target.classList.contains("cycle-slider")) {
+            state.stations[index].cycleTimeSec = Number(event.target.value);
             render();
+        } else if (event.target.classList.contains("setup-slider")) {
+            state.stations[index].setupTimeMin = Number(event.target.value);
+            render();
+        } else if (event.target.classList.contains("station-name-input")) {
+            state.stations[index].name = event.target.value;
+            delete state.name;
+            if (index === FlowOptimaSimulation.calculateMetrics(state).bottleneckIndex) {
+                document.getElementById("kpiBottleneck").textContent = event.target.value;
+            }
         }
     });
+
     stationsContainer.addEventListener("click", (event) => {
         if (!event.target.classList.contains("remove-btn")) return;
         const index = Number(event.target.dataset.idx);
         if (!Number.isInteger(index) || state.stations.length <= 1) return;
         state.stations.splice(index, 1);
-        persistActiveCustomProfile();
+        delete state.name;
         render();
     });
+
     document.getElementById("addStationBtn").addEventListener("click", () => {
-        state.stations.push({ id: Date.now(), name: `${state.stations.length + 1}. Nowe stanowisko`, cycleTimeSec: 60, setupTimeMin: 10 });
-        persistActiveCustomProfile();
+        state.stations.push({
+            id: Date.now(),
+            name: `${state.stations.length + 1}. Nowe stanowisko`,
+            cycleTimeSec: 60,
+            setupTimeMin: 10
+        });
+        delete state.name;
         render();
     });
-    presetSelect.addEventListener("change", (event) => {
-        const profile = PRESETS[event.target.value];
-        if (profile) {
-            state = FlowOptimaScenarios.getProfile(event.target.value).config;
-            activeProfileId = event.target.value;
-        } else {
-            const custom = readCustomProfiles().find((item) => item.id === event.target.value);
-            if (!custom) return;
-            state = JSON.parse(JSON.stringify(custom.config));
-            activeProfileId = custom.id;
-        }
+
+    document.getElementById("presetSelect").addEventListener("change", (event) => {
+        const preset = PRESETS[event.target.value];
+        if (!preset) return;
+        state = JSON.parse(JSON.stringify(preset));
         syncGlobalInputs();
         render();
     });
-    document.getElementById("saveProfileBtn").addEventListener("click", saveAsCustomProfile);
-    document.getElementById("exportBtn").addEventListener("click", exportConfig);
-    document.getElementById("importInput").addEventListener("change", (event) => importConfig(event.target.files[0], event.target));
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+        const exportState = { ...state, name: state.name || "Spersonalizowany scenariusz" };
+        const blob = new Blob([JSON.stringify(exportState, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "konfiguracja_linii.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("importInput").addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 1024 * 1024) {
+            alert("Plik konfiguracyjny przekracza limit 1 MB.");
+            event.target.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const imported = JSON.parse(reader.result);
+                const validation = FlowOptimaSimulation.validateConfig(imported);
+                if (!validation.valid) {
+                    alert(`Nieprawidłowa konfiguracja:\n${validation.errors.join("\n")}`);
+                    return;
+                }
+                state = validation.config;
+                if (typeof imported.name === "string" && imported.name.trim()) {
+                    state.name = imported.name.trim();
+                } else {
+                    state.name = "Własny scenariusz";
+                }
+                syncGlobalInputs();
+                document.getElementById("presetSelect").value = "";
+                render();
+            } catch (error) {
+                alert("Nie udało się odczytać pliku JSON.");
+            } finally {
+                event.target.value = "";
+            }
+        };
+        reader.onerror = () => {
+            alert("Błąd odczytu pliku konfiguracyjnego.");
+            event.target.value = "";
+        };
+        reader.readAsText(file);
+    });
 }
 
 init();
