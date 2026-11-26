@@ -1,5 +1,17 @@
 // Built-in synthetic examples; no confidential factory data is included.
 const PRESETS = {
+    standard: {
+        batchSize: 100,
+        shiftMinutes: 450,
+        hourlyCost: 250,
+        stations: [
+            { id: 1, name: "1. Przyjęcie i przygotowanie materiału", cycleTimeSec: 35, setupTimeMin: 10 },
+            { id: 2, name: "2. Obróbka / produkcja", cycleTimeSec: 75, setupTimeMin: 20 },
+            { id: 3, name: "3. Montaż", cycleTimeSec: 55, setupTimeMin: 15 },
+            { id: 4, name: "4. Kontrola jakości", cycleTimeSec: 25, setupTimeMin: 5 },
+            { id: 5, name: "5. Pakowanie i przygotowanie wysyłki", cycleTimeSec: 30, setupTimeMin: 5 }
+        ]
+    },
     cnc: {
         batchSize: 60,
         shiftMinutes: 450,
@@ -24,7 +36,8 @@ const PRESETS = {
     }
 };
 
-let state = JSON.parse(JSON.stringify(PRESETS.cnc));
+// Start from a general-purpose production flow; every profile remains editable.
+let state = JSON.parse(JSON.stringify(PRESETS.standard));
 const batchInput = document.getElementById("batchSize");
 const shiftInput = document.getElementById("shiftHours");
 const costInput = document.getElementById("hourlyCost");

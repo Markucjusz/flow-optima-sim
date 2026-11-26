@@ -14,9 +14,10 @@
                 <p class="subtitle">Symulator wąskich gardeł, czasów przezbrojeń (SMED) i wydajności linii</p>
             </div>
             <div class="config-controls">
-                <select id="presetSelect" title="Wybierz gotowy scenariusz testowy">
-                    <option value="cnc">Scenariusz Demo 1: Obróbka profili CNC</option>
-                    <option value="assembly">Scenariusz Demo 2: Gniazdo montażowe</option>
+                <select id="presetSelect" title="Wybierz edytowalny profil procesu">
+                    <option value="standard" selected>Profil standardowy: proces produkcyjny</option>
+                    <option value="cnc">Profil przykładowy: obróbka CNC</option>
+                    <option value="assembly">Profil przykładowy: montaż</option>
                 </select>
                 <button id="exportBtn" class="btn btn-secondary">Eksportuj JSON</button>
                 <label class="btn btn-secondary file-label">
@@ -32,18 +33,19 @@
             <h2>Parametry zlecenia produkcyjnego</h2>
             <div class="params-grid">
                 <div class="param-box">
-                    <label for="batchSize">Wielkość partii (szt.): <strong id="batchSizeVal">60</strong></label>
-                    <input type="range" id="batchSize" min="1" max="10000" step="1" value="60">
+                    <label for="batchSize">Wielkość partii (szt.): <strong id="batchSizeVal">100</strong></label>
+                    <input type="range" id="batchSize" min="1" max="10000" step="1" value="100">
                 </div>
                 <div class="param-box">
                     <label for="shiftHours">Czas dostępny na zmianie (min): <strong id="shiftHoursVal">450</strong></label>
                     <input type="range" id="shiftHours" min="1" max="1440" step="1" value="450">
                 </div>
                 <div class="param-box">
-                    <label for="hourlyCost">Koszt pracy linii (PLN / godz.): <strong id="hourlyCostVal">300</strong></label>
-                    <input type="range" id="hourlyCost" min="0" max="1000000" step="1" value="300">
+                    <label for="hourlyCost">Koszt pracy linii (PLN / godz.): <strong id="hourlyCostVal">250</strong></label>
+                    <input type="range" id="hourlyCost" min="0" max="1000000" step="1" value="250">
                 </div>
             </div>
+            <p class="subtitle profile-note">Profile są punktami startowymi — możesz zmieniać nazwy i parametry, dodawać lub usuwać stanowiska, a następnie zapisać własny wariant przez eksport JSON.</p>
         </section>
 
         <section class="kpi-grid" aria-live="polite">

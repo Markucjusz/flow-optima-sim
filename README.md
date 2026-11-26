@@ -6,11 +6,17 @@ FlowOptima to lekka aplikacja działająca w przeglądarce, która pozwala zbudo
 
 - Edycja wielkości partii, dostępnego czasu zmiany i kosztu godzinowego.
 - Dodawanie, usuwanie i edycja stanowisk.
+- Domyślny, uniwersalny profil procesu: przygotowanie materiału → produkcja/obróbka → montaż → kontrola jakości → pakowanie i wysyłka.
+- Dodatkowe profile startowe CNC i montażu; wszystkie profile można personalizować.
 - Wykrywanie stanowiska o największym obciążeniu dla partii.
 - Szacowanie czasu realizacji, przepustowości godzinowej i WIP przed wąskim gardłem.
 - Udział przezbrojeń pokazywany jako procent sumarycznego obciążenia stanowisk oraz koszt setupów.
 - Szacowana liczba sztuk na zmianę, uwzględniająca dostępne minuty i jedno przezbrojenie wąskiego gardła.
 - Import i eksport konfiguracji JSON. Dane pozostają w przeglądarce i nie są wysyłane do serwera.
+
+## Profile i personalizacja
+
+Aplikacja uruchamia się z profilem standardowego procesu produkcyjnego. To przykładowy szablon, a nie obowiązujący standard branżowy — jego etapy, wielkość partii, czasy i koszt są orientacyjne. Możesz edytować nazwy i parametry stanowisk, dodawać lub usuwać etapy oraz zmieniać parametry zlecenia. Profile CNC i montażu pozostają dostępne jako alternatywne punkty startowe. Użyj eksportu JSON, aby zachować własną konfigurację, i importu, aby otworzyć ją ponownie.
 
 ## Model i ograniczenia
 
