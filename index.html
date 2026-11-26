@@ -21,38 +21,36 @@
                 <button id="exportBtn" class="btn btn-secondary">Eksportuj JSON</button>
                 <label class="btn btn-secondary file-label">
                     Importuj JSON
-                    <input type="file" id="importInput" accept=".json" hidden>
+                    <input type="file" id="importInput" accept=".json,application/json" hidden>
                 </label>
             </div>
         </div>
     </header>
 
     <main class="container">
-        <!-- Panel parametrów globalnych zlecenia -->
         <section class="card global-params">
             <h2>Parametry zlecenia produkcyjnego</h2>
             <div class="params-grid">
                 <div class="param-box">
-                    <label for="batchSize">Wielkość partii (szt.): <strong id="batchSizeVal">50</strong></label>
-                    <input type="range" id="batchSize" min="10" max="500" step="10" value="50">
+                    <label for="batchSize">Wielkość partii (szt.): <strong id="batchSizeVal">60</strong></label>
+                    <input type="range" id="batchSize" min="1" max="10000" step="1" value="60">
                 </div>
                 <div class="param-box">
                     <label for="shiftHours">Czas dostępny na zmianie (min): <strong id="shiftHoursVal">450</strong></label>
-                    <input type="range" id="shiftHours" min="240" max="480" step="15" value="450">
+                    <input type="range" id="shiftHours" min="1" max="1440" step="1" value="450">
                 </div>
                 <div class="param-box">
-                    <label for="hourlyCost">Koszt pracy linii (PLN / godz.): <strong id="hourlyCostVal">250</strong></label>
-                    <input type="range" id="hourlyCost" min="100" max="1000" step="50" value="250">
+                    <label for="hourlyCost">Koszt pracy linii (PLN / godz.): <strong id="hourlyCostVal">300</strong></label>
+                    <input type="range" id="hourlyCost" min="0" max="1000000" step="1" value="300">
                 </div>
             </div>
         </section>
 
-        <!-- Wskaźniki KPI -->
-        <section class="kpi-grid">
+        <section class="kpi-grid" aria-live="polite">
             <div class="card kpi-card">
-                <span class="kpi-title">Wąskie gardło (Bottleneck)</span>
+                <span class="kpi-title">Wąskie gardło</span>
                 <strong class="kpi-value danger" id="kpiBottleneck">-</strong>
-                <span class="kpi-desc" id="kpiBottleneckTime">Czas na sztukę: -</span>
+                <span class="kpi-desc" id="kpiBottleneckTime">Obciążenie partią: -</span>
             </div>
             <div class="card kpi-card">
                 <span class="kpi-title">Czas realizacji partii (Lead Time)</span>
@@ -62,33 +60,36 @@
             <div class="card kpi-card">
                 <span class="kpi-title">Udział przezbrojeń (SMED)</span>
                 <strong class="kpi-value warning" id="kpiSetupShare">-</strong>
-                <span class="kpi-desc" id="kpiSetupCost">Koszt przezbrojeń: - PLN</span>
+                <span class="kpi-desc" id="kpiSetupCost">-</span>
             </div>
             <div class="card kpi-card">
-                <span class="kpi-title">Zapas w toku (Bufor WIP przed gardłem)</span>
+                <span class="kpi-title">Szacowana produkcja na zmianę</span>
+                <strong class="kpi-value" id="kpiShiftCapacity">-</strong>
+                <span class="kpi-desc" id="kpiShiftCapacityDesc">-</span>
+            </div>
+            <div class="card kpi-card">
+                <span class="kpi-title">Zapas w toku (WIP przed gardłem)</span>
                 <strong class="kpi-value" id="kpiWip">-</strong>
-                <span class="kpi-desc">Sztuki oczekujące na obróbkę</span>
+                <span class="kpi-desc">Uproszczone oszacowanie dla poprzedniego stanowiska</span>
             </div>
         </section>
 
-        <!-- Wizualizacja stanowisk i konfiguracja -->
         <section class="card">
             <div class="section-header">
-                <h2>Stanowiska w procesie (Edytuj parametry poniżej)</h2>
+                <h2>Stanowiska w procesie</h2>
                 <button id="addStationBtn" class="btn btn-primary">+ Dodaj stanowisko</button>
             </div>
-            <div id="stationsContainer" class="stations-flow">
-                <!-- Generowane dynamicznie przez JS -->
-            </div>
+            <div id="stationsContainer" class="stations-flow"></div>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            <p>Aplikacja działa w 100% lokalnie w przeglądarce. Żadne dane nie są przesyłane na serwer.</p>
+            <p>Aplikacja działa lokalnie w przeglądarce. Szacowana produkcja na zmianę zakłada jedno przezbrojenie na wąskim gardle i stały czas cyklu.</p>
         </div>
     </footer>
 
+    <script src="simulation.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

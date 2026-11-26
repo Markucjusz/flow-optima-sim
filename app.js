@@ -1,4 +1,4 @@
-// Wbudowane dane syntetyczne (bez poufnych danych zakładowych)
+// Built-in synthetic examples; no confidential factory data is included.
 const PRESETS = {
     cnc: {
         batchSize: 60,
@@ -24,16 +24,12 @@ const PRESETS = {
     }
 };
 
-// Aktualny stan symulacji
 let state = JSON.parse(JSON.stringify(PRESETS.cnc));
-
-// Elementy DOM
 const batchInput = document.getElementById("batchSize");
 const shiftInput = document.getElementById("shiftHours");
 const costInput = document.getElementById("hourlyCost");
 const stationsContainer = document.getElementById("stationsContainer");
 
-// Inicjalizacja
 function init() {
     syncGlobalInputs();
     render();
@@ -44,188 +40,185 @@ function syncGlobalInputs() {
     batchInput.value = state.batchSize;
     shiftInput.value = state.shiftMinutes;
     costInput.value = state.hourlyCost;
-
     document.getElementById("batchSizeVal").textContent = state.batchSize;
     document.getElementById("shiftHoursVal").textContent = state.shiftMinutes;
     document.getElementById("hourlyCostVal").textContent = state.hourlyCost;
 }
 
-// Główna funkcja obliczeniowa i renderująca
+function createElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+}
+
+function createRange(className, index, min, max, value, step = 1) {
+    const input = document.createElement("input");
+    input.type = "range";
+    input.className = className;
+    input.dataset.idx = index;
+    input.min = min;
+    input.max = max;
+    input.step = step;
+    input.value = value;
+    return input;
+}
+
 function render() {
-    if (state.stations.length === 0) return;
+    const result = FlowOptimaSimulation.calculateMetrics(state);
+    const { stations, bottleneckIndex } = result;
 
-    // 1. Obliczenia dla każdego stanowiska
-    let maxTotalTimeMin = 0;
-    let bottleneckStation = null;
-    let bottleneckIndex = 0;
+    document.getElementById("kpiBottleneck").textContent = result.bottleneck.name;
+    document.getElementById("kpiBottleneckTime").textContent = `Obciążenie partią: ${Math.round(result.bottleneck.totalMin)} min`;
+    document.getElementById("kpiLeadTime").textContent = `${Math.round(result.leadTimeMin)} min (${(result.leadTimeMin / 60).toFixed(1)} h)`;
+    document.getElementById("kpiThroughput").textContent = `Wydajność linii: ${result.throughputPerHour.toFixed(1)} szt./h`;
+    document.getElementById("kpiSetupShare").textContent = `${result.setupSharePercent.toFixed(1)}%`;
+    document.getElementById("kpiSetupCost").textContent = `${result.totalSetupMin} min łącznie · koszt: ${result.setupCost.toFixed(2)} PLN`;
+    document.getElementById("kpiWip").textContent = `${result.wipUnits} szt.`;
+    document.getElementById("kpiShiftCapacity").textContent = `${result.unitsPerShift} szt.`;
+    document.getElementById("kpiShiftCapacityDesc").textContent = `Szacunek dla ${state.shiftMinutes} min; odjęto setup wąskiego gardła`;
 
-    const calculatedStations = state.stations.map((st, index) => {
-        const processingMin = (st.cycleTimeSec * state.batchSize) / 60;
-        const totalMin = processingMin + st.setupTimeMin;
-
-        if (totalMin > maxTotalTimeMin) {
-            maxTotalTimeMin = totalMin;
-            bottleneckStation = st;
-            bottleneckIndex = index;
+    stationsContainer.replaceChildren();
+    stations.forEach((station, index) => {
+        const isBottleneck = index === bottleneckIndex;
+        const utilization = Math.min(100, Math.round((station.totalMin / result.bottleneck.totalMin) * 100));
+        const card = createElement("div", `station-card${isBottleneck ? " is-bottleneck" : ""}`);
+        const header = createElement("div", "station-header");
+        const name = document.createElement("input");
+        name.type = "text";
+        name.className = "station-name-input";
+        name.value = station.name;
+        name.maxLength = FlowOptimaSimulation.LIMITS.stationNameLength;
+        name.dataset.idx = index;
+        name.setAttribute("aria-label", `Nazwa stanowiska ${index + 1}`);
+        header.appendChild(name);
+        if (stations.length > 1) {
+            const remove = createElement("button", "remove-btn", "✕");
+            remove.type = "button";
+            remove.dataset.idx = index;
+            remove.title = "Usuń stanowisko";
+            remove.setAttribute("aria-label", `Usuń stanowisko ${index + 1}`);
+            header.appendChild(remove);
         }
+        card.appendChild(header);
 
-        return { ...st, processingMin, totalMin };
-    });
+        const cycleField = createElement("div", "station-field");
+        const cycleLabel = createElement("label");
+        cycleLabel.append("Czas cyklu (szt.): ", createElement("strong", "", `${station.cycleTimeSec} sek.`));
+        cycleField.append(cycleLabel, createRange("cycle-slider", index, 1, 3600, station.cycleTimeSec));
+        card.appendChild(cycleField);
 
-    // 2. Obliczenia KPI linii
-    // Całkowity czas partii (uproszczony przepływ potokowy: czas najwolniejszego + czas wypełnienia linii)
-    const bottleneckCycleMin = bottleneckStation.cycleTimeSec / 60;
-    const otherCyclesSumMin = calculatedStations
-        .filter((_, idx) => idx !== bottleneckIndex)
-        .reduce((acc, st) => acc + (st.cycleTimeSec / 60), 0);
-    const totalSetupMin = calculatedStations.reduce((acc, st) => acc + st.setupTimeMin, 0);
+        const setupField = createElement("div", "station-field");
+        const setupLabel = createElement("label");
+        setupLabel.append("Przezbrojenie (SMED): ", createElement("strong", "", `${station.setupTimeMin} min`));
+        setupField.append(setupLabel, createRange("setup-slider", index, 0, 1440, station.setupTimeMin));
+        card.appendChild(setupField);
 
-    const leadTimeMin = (state.batchSize * bottleneckCycleMin) + otherCyclesSumMin + bottleneckStation.setupTimeMin;
-    const throughputPerHour = Math.round(60 / bottleneckCycleMin);
-    const setupSharePercent = Math.round((totalSetupMin / (leadTimeMin * state.stations.length)) * 100);
-    const setupCostPln = Math.round((totalSetupMin / 60) * state.hourlyCost);
-
-    // Zapas WIP (ile sztuk wyprodukuje stanowisko poprzedzające, zanim wąskie gardło przerobi partię)
-    let wipUnits = 0;
-    if (bottleneckIndex > 0) {
-        const prevStation = calculatedStations[bottleneckIndex - 1];
-        if (prevStation.cycleTimeSec < bottleneckStation.cycleTimeSec) {
-            const diffPerUnitSec = bottleneckStation.cycleTimeSec - prevStation.cycleTimeSec;
-            wipUnits = Math.floor((diffPerUnitSec * state.batchSize) / bottleneckStation.cycleTimeSec);
-        }
-    }
-
-    // 3. Aktualizacja kart KPI
-    document.getElementById("kpiBottleneck").textContent = bottleneckStation.name;
-    document.getElementById("kpiBottleneckTime").textContent = `Obciążenie partią: ${Math.round(maxTotalTimeMin)} min`;
-    document.getElementById("kpiLeadTime").textContent = `${Math.round(leadTimeMin)} min (${(leadTimeMin / 60).toFixed(1)} h)`;
-    document.getElementById("kpiThroughput").textContent = `Wydajność linii: ${throughputPerHour} szt./h`;
-    document.getElementById("kpiSetupShare").textContent = `${totalSetupMin} min łącznie`;
-    document.getElementById("kpiSetupCost").textContent = `Koszt przezbrojeń: ${setupCostPln} PLN`;
-    document.getElementById("kpiWip").textContent = `${wipUnits} szt.`;
-
-    // 4. Renderowanie kart stanowisk
-    stationsContainer.innerHTML = "";
-    calculatedStations.forEach((st, idx) => {
-        const isBottleneck = st.id === bottleneckStation.id;
-        const utilization = Math.min(100, Math.round((st.totalMin / maxTotalTimeMin) * 100));
-
-        const card = document.createElement("div");
-        card.className = `station-card ${isBottleneck ? "is-bottleneck" : ""}`;
-        card.innerHTML = `
-            <div class="station-header">
-                <input type="text" class="station-name-input" value="${st.name}" data-idx="${idx}">
-                ${state.stations.length > 1 ? `<button class="remove-btn" data-idx="${idx}" title="Usuń stanowisko">✕</button>` : ""}
-            </div>
-            <div class="station-field">
-                <label>Czas cyklu (szt.): <strong>${st.cycleTimeSec} sek.</strong></label>
-                <input type="range" class="cycle-slider" data-idx="${idx}" min="5" max="300" step="5" value="${st.cycleTimeSec}">
-            </div>
-            <div class="station-field">
-                <label>Przezbrojenie (SMED): <strong>${st.setupTimeMin} min</strong></label>
-                <input type="range" class="setup-slider" data-idx="${idx}" min="0" max="90" step="5" value="${st.setupTimeMin}">
-            </div>
-            <div class="station-stats">
-                <span>Obciążenie: <strong>${utilization}%</strong> (${Math.round(st.totalMin)} min)</span>
-                ${isBottleneck ? `<span class="bottleneck-tag">WĄSKIE GARDŁO</span>` : ""}
-            </div>
-        `;
+        const stats = createElement("div", "station-stats");
+        stats.appendChild(createElement("span", "", `Obciążenie: ${utilization}% (${Math.round(station.totalMin)} min)`));
+        if (isBottleneck) stats.appendChild(createElement("span", "bottleneck-tag", "WĄSKIE GARDŁO"));
+        card.appendChild(stats);
         stationsContainer.appendChild(card);
     });
 }
 
-// Obsługa zdarzeń
 function attachEvents() {
-    batchInput.addEventListener("input", (e) => {
-        state.batchSize = Number(e.target.value);
+    batchInput.addEventListener("input", (event) => {
+        state.batchSize = Number(event.target.value);
         document.getElementById("batchSizeVal").textContent = state.batchSize;
         render();
     });
-
-    shiftInput.addEventListener("input", (e) => {
-        state.shiftMinutes = Number(e.target.value);
+    shiftInput.addEventListener("input", (event) => {
+        state.shiftMinutes = Number(event.target.value);
         document.getElementById("shiftHoursVal").textContent = state.shiftMinutes;
         render();
     });
-
-    costInput.addEventListener("input", (e) => {
-        state.hourlyCost = Number(e.target.value);
+    costInput.addEventListener("input", (event) => {
+        state.hourlyCost = Number(event.target.value);
         document.getElementById("hourlyCostVal").textContent = state.hourlyCost;
         render();
     });
 
-    // Delegacja zdarzeń dla dynamicznych stanowisk
-    stationsContainer.addEventListener("input", (e) => {
-        const idx = e.target.dataset.idx;
-        if (e.target.classList.contains("cycle-slider")) {
-            state.stations[idx].cycleTimeSec = Number(e.target.value);
+    stationsContainer.addEventListener("input", (event) => {
+        const index = Number(event.target.dataset.idx);
+        if (!Number.isInteger(index) || !state.stations[index]) return;
+        if (event.target.classList.contains("cycle-slider")) {
+            state.stations[index].cycleTimeSec = Number(event.target.value);
             render();
-        } else if (e.target.classList.contains("setup-slider")) {
-            state.stations[idx].setupTimeMin = Number(e.target.value);
+        } else if (event.target.classList.contains("setup-slider")) {
+            state.stations[index].setupTimeMin = Number(event.target.value);
             render();
-        } else if (e.target.classList.contains("station-name-input")) {
-            state.stations[idx].name = e.target.value;
+        } else if (event.target.classList.contains("station-name-input")) {
+            state.stations[index].name = event.target.value;
+            document.getElementById("kpiBottleneck").textContent = state.stations[index].name;
         }
     });
 
-    stationsContainer.addEventListener("click", (e) => {
-        if (e.target.classList.contains("remove-btn")) {
-            const idx = Number(e.target.dataset.idx);
-            state.stations.splice(idx, 1);
-            render();
-        }
+    stationsContainer.addEventListener("click", (event) => {
+        if (!event.target.classList.contains("remove-btn")) return;
+        const index = Number(event.target.dataset.idx);
+        if (!Number.isInteger(index) || state.stations.length <= 1) return;
+        state.stations.splice(index, 1);
+        render();
     });
 
-    // Dodawanie stanowiska
     document.getElementById("addStationBtn").addEventListener("click", () => {
-        const nextNum = state.stations.length + 1;
         state.stations.push({
             id: Date.now(),
-            name: `${nextNum}. Nowe stanowisko`,
+            name: `${state.stations.length + 1}. Nowe stanowisko`,
             cycleTimeSec: 60,
             setupTimeMin: 10
         });
         render();
     });
 
-    // Zmiana scenariusza demo
-    document.getElementById("presetSelect").addEventListener("change", (e) => {
-        const key = e.target.value;
-        state = JSON.parse(JSON.stringify(PRESETS[key]));
+    document.getElementById("presetSelect").addEventListener("change", (event) => {
+        const preset = PRESETS[event.target.value];
+        if (!preset) return;
+        state = JSON.parse(JSON.stringify(preset));
         syncGlobalInputs();
         render();
     });
 
-    // Eksport konfiguracji do pliku JSON
     document.getElementById("exportBtn").addEventListener("click", () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-        const downloadAnchor = document.createElement("a");
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", "konfiguracja_linii.json");
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "konfiguracja_linii.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
     });
 
-    // Import własnej konfiguracji z pliku JSON
-    document.getElementById("importInput").addEventListener("change", (e) => {
-        const file = e.target.files[0];
+    document.getElementById("importInput").addEventListener("change", (event) => {
+        const file = event.target.files[0];
         if (!file) return;
-
+        if (file.size > 1024 * 1024) {
+            alert("Plik konfiguracyjny przekracza limit 1 MB.");
+            event.target.value = "";
+            return;
+        }
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = () => {
             try {
-                const imported = JSON.parse(event.target.result);
-                if (imported.stations && Array.isArray(imported.stations)) {
-                    state = imported;
-                    syncGlobalInputs();
-                    render();
-                } else {
-                    alert("Nieprawidłowy format pliku konfiguracyjnego.");
+                const imported = JSON.parse(reader.result);
+                const validation = FlowOptimaSimulation.validateConfig(imported);
+                if (!validation.valid) {
+                    alert(`Nieprawidłowa konfiguracja:\n${validation.errors.join("\n")}`);
+                    return;
                 }
-            } catch (err) {
-                alert("Błąd odczytu pliku JSON.");
+                state = validation.config;
+                syncGlobalInputs();
+                render();
+            } catch (error) {
+                alert("Nie udało się odczytać pliku JSON.");
+            } finally {
+                event.target.value = "";
             }
+        };
+        reader.onerror = () => {
+            alert("Błąd odczytu pliku konfiguracyjnego.");
+            event.target.value = "";
         };
         reader.readAsText(file);
     });

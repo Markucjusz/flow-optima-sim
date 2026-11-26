@@ -1,49 +1,57 @@
-# flow-optima-sim# FlowOptima — Symulator Przepływu Produkcji (Digital Twin Lite)
+# FlowOptima — symulator przepływu produkcji
 
-**FlowOptima** to lekka, działająca w przeglądarce aplikacja typu *White-Label* służąca do modelowania linii produkcyjnych, identyfikacji wąskich gardeł (*Bottlenecks*) oraz analizy wpływu czasów przezbrojeń (SMED) na wydajność i koszty operacyjne.
+FlowOptima to lekka aplikacja działająca w przeglądarce, która pozwala zbudować linię z kolejnych stanowisk oraz oszacować wąskie gardło, przepustowość, czas partii, przezbrojenia i WIP. Jest przeznaczona do szybkiego porównywania scenariuszy; nie zastępuje symulacji zdarzeń dyskretnych ani systemu MES.
 
-🔗 **Wersja demonstracyjna (Live Demo):** `https://TWOJ-LOGIN.github.io/flow-optima-sim/`
+## Funkcje
 
----
+- Edycja wielkości partii, dostępnego czasu zmiany i kosztu godzinowego.
+- Dodawanie, usuwanie i edycja stanowisk.
+- Wykrywanie stanowiska o największym obciążeniu dla partii.
+- Szacowanie czasu realizacji, przepustowości godzinowej i WIP przed wąskim gardłem.
+- Udział przezbrojeń pokazywany jako procent sumarycznego obciążenia stanowisk oraz koszt setupów.
+- Szacowana liczba sztuk na zmianę, uwzględniająca dostępne minuty i jedno przezbrojenie wąskiego gardła.
+- Import i eksport konfiguracji JSON. Dane pozostają w przeglądarce i nie są wysyłane do serwera.
 
-## 🎯 Problem biznesowy
-W produkcji seryjnej i jednostkowej (*Make-to-Order*) zmiany w kolejności zleceń lub wydłużenie przezbrojenia na jednej maszynie często powodują nieoczekiwane zatory i narastanie zapasów produkcji w toku (WIP). Testowanie zmian organizacyjnych bezpośrednio na hali jest kosztowne i ryzykowne.
+## Model i ograniczenia
 
-**Rozwiązanie:** Narzędzie pozwala kierownikom, planistom i liderom zespołów zasymulować zachowanie procesu w kilka sekund przed podjęciem decyzji na hali – bez konieczności instalowania specjalistycznego oprogramowania.
+Silnik jest deterministycznym, uproszczonym modelem liniowego procesu. Obciążenie stanowiska dla partii wylicza się jako:
 
----
+```text
+obciążenie_i_min = (czas_cyklu_i_s × wielkość_partii / 60) + przezbrojenie_i_min
+```
 
-## ⚙️ Główne funkcjonalności
-* **Dynamiczna identyfikacja wąskiego gardła:** Automatyczne wykrywanie stanowiska o najwyższym obciążeniu całkowitym (czas obróbki partii + czas przezbrojenia).
-* **Analiza wpływu SMED:** Natychmiastowe przeliczanie udziału oraz kosztu przezbrojeń w całkowitym czasie realizacji zlecenia.
-* **Szacowanie bufora WIP:** Wyliczanie liczby detali gromadzących się przed najwolniejszym ogniwem procesu.
-* **Architektura „Silnik + Konfiguracja” (100% prywatności):** Aplikacja nie wysyła żadnych danych na zewnętrzne serwery. Użytkownik może korzystać z wbudowanych scenariuszy demonstracyjnych lub wczytywać i zapisywać własne profile linii produkcyjnych w lokalnych plikach `.json`.
+Wąskim gardłem jest stanowisko z największym obciążeniem partii. Czas partii to przybliżony czas wypełnienia potoku: liczba sztuk pomnożona przez cykl wąskiego gardła, plus cykle pozostałych stanowisk i przezbrojenie gardła. Przepustowość godzinowa to odwrotność cyklu wąskiego gardła. Szacowana produkcja na zmianę zakłada jedno przezbrojenie gardła w danej zmianie i stałe czasy cyklu. WIP jest orientacyjnym oszacowaniem uwzględniającym tylko stanowisko bezpośrednio przed gardłem.
 
----
+Model nie uwzględnia awarii, zmienności czasów, równoległych maszyn, alternatywnych tras, transportu ani braków jakościowych. Wyniki należy traktować jako porównawcze szacunki, nie gwarantowane plany produkcyjne.
 
-## 📐 Założenia matematyczne modelu
-Symulator opiera się na deterministycznym modelu przepływu potokowego:
+## Uruchomienie
 
-1. **Czas obciążenia stanowiska ($T_i$):**
-   $$T_i = \left(\frac{t_{cykl, i} \cdot N}{60}\right) + t_{SMED, i}$$
-   *(gdzie $N$ to wielkość partii, $t_{cykl}$ to czas obróbki 1 szt. w sekundach, a $t_{SMED}$ to czas przezbrojenia w minutach)*
+Aplikacja nie wymaga instalacji zależności. Otwórz `index.html` bezpośrednio w przeglądarce albo uruchom prosty serwer lokalny:
 
-2. **Czas realizacji partii ($Lead\ Time$):**
-   $$LT = (N \cdot t_{cykl, max}) + \sum_{i \neq max} t_{cykl, i} + t_{SMED, max}$$
+```bash
+python3 -m http.server 8000
+```
 
-3. **Bufor produkcji w toku ($WIP$ przed wąskim gardłem):**
-   Wyliczany na podstawie różnicy taktów pomiędzy stanowiskiem poprzedzającym a wąskim gardłem w trakcie trwania partii.
+Otwórz `http://localhost:8000`.
 
----
+## Testy
 
-## 🛠️ Stack technologiczny
-* **HTML5 / CSS3** (responsywny interfejs w ciemnym motywie industrialnym, Grid/Flexbox)
-* **Vanilla JavaScript (ES6+)** (logika obliczeniowa, manipulacja DOM, obsługa `FileReader` API do importu/eksportu plików JSON)
-* **GitHub Pages** (hosting statyczny bez kosztów utrzymania backendu)
+Silnik obliczeniowy jest oddzielony od DOM, dlatego testy można uruchomić w Node.js (wymagana wersja obsługująca `node:test`):
 
----
+```bash
+npm test
+```
 
-## 🚀 Jak dostosować narzędzie do własnego procesu?
-1. Uruchom aplikację w przeglądarce.
-2. Zmień nazwy stanowisk, czasy cyklu oraz czasy przezbrojeń za pomocą suwaków (możesz dodawać i usuwać dowolną liczbę etapów).
-3. Kliknij **„Eksportuj JSON”**, aby zapisać skonfigurowany profil linii na swoim dysku lokalnym do ponownego wykorzystania.
+Testy obejmują walidację konfiguracji, wybór wąskiego gardła, obliczenia obciążenia, SMED, kosztu i wpływu czasu zmiany.
+
+## Import konfiguracji
+
+Importowany JSON musi zawierać `batchSize`, `shiftMinutes`, `hourlyCost` oraz niepustą tablicę `stations`. Każde stanowisko wymaga niepustej nazwy (maksymalnie 80 znaków), `cycleTimeSec` i `setupTimeMin`. Wartości muszą mieścić się w zakresach: partia 1–10 000 szt., zmiana 1–1440 min, koszt 0–1 000 000 PLN/h, cykl 1–3600 s i przezbrojenie 0–1440 min. Maksymalny rozmiar importowanego pliku to 1 MB. Nieprawidłowa konfiguracja nie zastępuje bieżącego scenariusza.
+
+## Struktura
+
+- `index.html` — interfejs aplikacji.
+- `app.js` — obsługa DOM, edycja stanu oraz import/eksport.
+- `simulation.js` — walidacja i czysty silnik obliczeniowy.
+- `simulation.test.js` — testy jednostkowe silnika.
+- `style.css` — style.
