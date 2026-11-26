@@ -3,92 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlowOptima | Symulator Przepływu Produkcji (Digital Twin Lite)</title>
+    <meta name="description" content="FlowOptima - symulator przepływu produkcji, przestojów, SMED i WIP">
+    <title>FlowOptima | Symulator przepływu produkcji</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <div class="container header-content">
             <div>
-                <h1>FlowOptima <span class="badge">Digital Twin Lite</span></h1>
-                <p class="subtitle">Symulator wąskich gardeł, czasów przezbrojeń (SMED) i wydajności linii</p>
+                <h1>FlowOptima <span class="badge">Digital Twin</span></h1>
+                <p class="subtitle">Symulator przepływu produkcji z przestojami i SMED</p>
             </div>
             <div class="config-controls">
-                <select id="presetSelect" title="Wybierz gotowy scenariusz testowy">
-                    <option value="cnc">Scenariusz Demo 1: Obróbka profili CNC</option>
-                    <option value="assembly">Scenariusz Demo 2: Gniazdo montażowe</option>
-                </select>
-                <button id="exportBtn" class="btn btn-secondary">Eksportuj JSON</button>
-                <label class="btn btn-secondary file-label">
-                    Importuj JSON
-                    <input type="file" id="importInput" accept=".json" hidden>
+                <label><span class="sr-only">Scenariusz</span>
+                    <select id="presetSelect">
+                        <option value="cnc">Obróbka profili CNC</option>
+                        <option value="assembly">Gniazdo montażowe</option>
+                    </select>
+                </label>
+                <button id="saveScenarioBtn" class="btn btn-secondary" type="button">Zapisz scenariusz</button>
+                <button id="exportBtn" class="btn btn-secondary" type="button">Eksportuj JSON</button>
+                <label class="btn btn-secondary file-label">Importuj JSON
+                    <input type="file" id="importInput" accept=".json,application/json" hidden>
                 </label>
             </div>
         </div>
     </header>
 
     <main class="container">
-        <!-- Panel parametrów globalnych zlecenia -->
-        <section class="card global-params">
-            <h2>Parametry zlecenia produkcyjnego</h2>
+        <section class="card global-params" aria-labelledby="params-title">
+            <div class="section-header"><h2 id="params-title">Parametry symulacji</h2></div>
             <div class="params-grid">
-                <div class="param-box">
-                    <label for="batchSize">Wielkość partii (szt.): <strong id="batchSizeVal">50</strong></label>
-                    <input type="range" id="batchSize" min="10" max="500" step="10" value="50">
-                </div>
-                <div class="param-box">
-                    <label for="shiftHours">Czas dostępny na zmianie (min): <strong id="shiftHoursVal">450</strong></label>
-                    <input type="range" id="shiftHours" min="240" max="480" step="15" value="450">
-                </div>
-                <div class="param-box">
-                    <label for="hourlyCost">Koszt pracy linii (PLN / godz.): <strong id="hourlyCostVal">250</strong></label>
-                    <input type="range" id="hourlyCost" min="100" max="1000" step="50" value="250">
-                </div>
+                <div class="param-box"><label for="batchSize">Wielkość partii: <strong id="batchSizeVal">60</strong> szt.</label><input type="range" id="batchSize" min="1" max="500" step="1" value="60"></div>
+                <div class="param-box"><label for="shiftMinutes">Długość zmiany: <strong id="shiftMinutesVal">450</strong> min</label><input type="range" id="shiftMinutes" min="60" max="1440" step="15" value="450"></div>
+                <div class="param-box"><label for="hourlyCost">Koszt pracy: <strong id="hourlyCostVal">300</strong> PLN/h</label><input type="range" id="hourlyCost" min="50" max="2000" step="50" value="300"></div>
             </div>
         </section>
 
-        <!-- Wskaźniki KPI -->
-        <section class="kpi-grid">
-            <div class="card kpi-card">
-                <span class="kpi-title">Wąskie gardło (Bottleneck)</span>
-                <strong class="kpi-value danger" id="kpiBottleneck">-</strong>
-                <span class="kpi-desc" id="kpiBottleneckTime">Czas na sztukę: -</span>
-            </div>
-            <div class="card kpi-card">
-                <span class="kpi-title">Czas realizacji partii (Lead Time)</span>
-                <strong class="kpi-value" id="kpiLeadTime">-</strong>
-                <span class="kpi-desc" id="kpiThroughput">Wydajność: - szt./h</span>
-            </div>
-            <div class="card kpi-card">
-                <span class="kpi-title">Udział przezbrojeń (SMED)</span>
-                <strong class="kpi-value warning" id="kpiSetupShare">-</strong>
-                <span class="kpi-desc" id="kpiSetupCost">Koszt przezbrojeń: - PLN</span>
-            </div>
-            <div class="card kpi-card">
-                <span class="kpi-title">Zapas w toku (Bufor WIP przed gardłem)</span>
-                <strong class="kpi-value" id="kpiWip">-</strong>
-                <span class="kpi-desc">Sztuki oczekujące na obróbkę</span>
-            </div>
+        <section class="kpi-grid" aria-label="Wyniki symulacji">
+            <article class="card kpi-card"><span class="kpi-title">Wąskie gardło</span><strong class="kpi-value danger" id="kpiBottleneck">-</strong><span class="kpi-desc" id="kpiBottleneckTime">Obciążenie: -</span></article>
+            <article class="card kpi-card"><span class="kpi-title">Lead time partii</span><strong class="kpi-value" id="kpiLeadTime">-</strong><span class="kpi-desc" id="kpiThroughput">Wydajność: -</span></article>
+            <article class="card kpi-card"><span class="kpi-title">Dostępność linii</span><strong class="kpi-value warning" id="kpiAvailability">-</strong><span class="kpi-desc" id="kpiDowntime">Przestoje: -</span></article>
+            <article class="card kpi-card"><span class="kpi-title">WIP przed gardłem</span><strong class="kpi-value" id="kpiWip">-</strong><span class="kpi-desc" id="kpiCost">Koszt całkowity: -</span></article>
         </section>
 
-        <!-- Wizualizacja stanowisk i konfiguracja -->
         <section class="card">
-            <div class="section-header">
-                <h2>Stanowiska w procesie (Edytuj parametry poniżej)</h2>
-                <button id="addStationBtn" class="btn btn-primary">+ Dodaj stanowisko</button>
-            </div>
-            <div id="stationsContainer" class="stations-flow">
-                <!-- Generowane dynamicznie przez JS -->
-            </div>
+            <div class="section-header"><h2>Stanowiska i przestoje</h2><button id="addStationBtn" class="btn btn-primary" type="button">+ Dodaj stanowisko</button></div>
+            <div id="stationsContainer" class="stations-flow"></div>
+        </section>
+
+        <section class="card" aria-labelledby="scenarios-title">
+            <div class="section-header"><h2 id="scenarios-title">Zapisane scenariusze</h2><button id="clearScenariosBtn" class="btn btn-secondary" type="button">Wyczyść</button></div>
+            <div id="scenariosContainer" class="scenarios-list"></div>
         </section>
     </main>
 
-    <footer>
-        <div class="container">
-            <p>Aplikacja działa w 100% lokalnie w przeglądarce. Żadne dane nie są przesyłane na serwer.</p>
-        </div>
-    </footer>
-
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <footer><div class="container"><p>Symulator działa lokalnie w przeglądarce. Dane nie są przesyłane na serwer.</p></div></footer>
     <script src="app.js"></script>
 </body>
 </html>

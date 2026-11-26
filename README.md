@@ -1,49 +1,43 @@
-# flow-optima-sim# FlowOptima — Symulator Przepływu Produkcji (Digital Twin Lite)
+# flow-optima-sim — FlowOptima
 
-**FlowOptima** to lekka, działająca w przeglądarce aplikacja typu *White-Label* służąca do modelowania linii produkcyjnych, identyfikacji wąskich gardeł (*Bottlenecks*) oraz analizy wpływu
+Aplikacja typu Digital Twin Lite do modelowania przepływu produkcji w przeglądarce.
 
-🔗 **Wersja demonstracyjna (Live Demo):** `https://Markucjusz.github.io/flow-optima-sim/`
+## Live Demo
 
----
+https://Markucjusz.github.io/flow-optima-sim/
 
-## 🎯 Problem biznesowy
-W produkcji seryjnej i jednostkowej (*Make-to-Order*) zmiany w kolejności zleceń lub wydłużenie przezbrojenia na jednej maszynie często powodują nieoczekiwane zatory i narastanie zapasów pr
+## Funkcje
 
-**Rozwiązanie:** Narzędzie pozwala kierownikom, planistom i liderom zespołów zasymulować zachowanie procesu w kilka sekund przed podjęciem decyzji na hali – bez konieczności instalowania
+- identyfikacja wąskiego gardła z uwzględnieniem dostępności stanowisk,
+- przezbrojenia SMED i ich koszty,
+- przestoje awaryjne o konfigurowanej częstotliwości i czasie trwania,
+- zmienne czasy cyklu, dostępność, bufory i wielkość partii,
+- zapis scenariuszy w pamięci lokalnej przeglądarki,
+- eksport i walidowany import konfiguracji JSON,
+- responsywny interfejs i komunikaty o błędach.
 
----
+## Model
 
-## ⚙️ Główne funkcjonalności
-* **Dynamiczna identyfikacja wąskiego gardła:** Automatyczne wykrywanie stanowiska o najwyższym obciążeniu całkowitym (czas obróbki partii + czas przezbrojenia).
-* **Analiza wpływu SMED:** Natychmiastowe przeliczanie udziału oraz kosztu przezbrojeń w całkowitym czasie realizacji zlecenia.
-* **Szacowanie bufora WIP:** Wyliczanie liczby detali gromadzących się przed najwolniejszym ogniwem procesu.
-* **Architektura „Silnik + Konfiguracja” (100% prywatności):** Aplikacja nie wysyła żadnych danych na zewnętrzne serwery. Użytkownik może korzystać z wbudowanych scenariuszy demonstracy
+Czas obróbki jest korygowany o dostępność stanowiska:
 
----
+```
+czas efektywny = czas obróbki / (dostępność / 100)
+czas przestojów = liczba przewidywanych awarii × czas awarii
+obciążenie = czas efektywny + SMED + czas przestojów
+```
 
-## 📐 Założenia matematyczne modelu
-Symulator opiera się na deterministycznym modelu przepływu potokowego:
+Wąskie gardło to stanowisko o największym obciążeniu całkowitym. Wartości są deterministycznymi estymacjami na potrzeby porównań scenariuszy, a nie modelem Monte Carlo.
 
-1. **Czas obciążenia stanowiska ($T_i$):**
-   $$T_i = \left(\frac{t_{cykl, i} \cdot N}{60}\right) + t_{SMED, i}$$
-   *(gdzie $N$ to wielkość partii, $t_{cykl}$ to czas obróbki 1 szt. w sekundach, a $t_{SMED}$ to czas przezbrojenia w minutach)*
+## Uruchomienie
 
-2. **Czas realizacji partii ($Lead\ Time$):**
-   $$LT = (N \cdot t_{cykl, max}) + \sum_{i \neq max} t_{cykl, i} + t_{SMED, max}$$
+Otwórz `index.html` bezpośrednio lub uruchom lokalny serwer:
 
-3. **Bufor produkcji w toku ($WIP$ przed wąskim gardłem):**
-   Wyliczany na podstawie różnicy taktów pomiędzy stanowiskiem poprzedzającym a wąskim gardłem w trakcie trwania partii.
+```bash
+python3 -m http.server 8000
+```
 
----
+Następnie przejdź pod adres `http://localhost:8000`.
 
-## 🛠️ Stack technologiczny
-* **HTML5 / CSS3** (responsywny interfejs w ciemnym motywie industrialnym, Grid/Flexbox)
-* **Vanilla JavaScript (ES6+)** (logika obliczeniowa, manipulacja DOM, obsługa `FileReader` API do importu/eksportu plików JSON)
-* **GitHub Pages** (hosting statyczny bez kosztów utrzymania backendu)
+## Technologie
 
----
-
-## 🚀 Jak dostosować narzędzie do własnego procesu?
-1. Uruchom aplikację w przeglądarce.
-2. Zmień nazwy stanowisk, czasy cyklu oraz czasy przezbrojeń za pomocą suwaków (możesz dodawać i usuwać dowolną liczbę etapów).
-3. Kliknij **„Eksportuj JSON”**, aby zapisać skonfigurowany profil linii na swoim dysku lokalnym do ponownego wykorzystania.
+HTML5, CSS3 i Vanilla JavaScript, bez zależności i backendu.
